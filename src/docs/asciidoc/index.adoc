@@ -1,0 +1,12 @@
+=== 전체 회원 조회 및 조건부 회원 조회
+.curl-request
+include::{snippets}/get-member/curl-request.adoc[]
+
+.http-request
+include::{snippets}/get-member/http-request.adoc[]
+
+.http-response
+include::{snippets}/get-member/http-response.adoc[]
+
+.response-fields
+include::{snippets}/get-member/response-fields.adoc[]

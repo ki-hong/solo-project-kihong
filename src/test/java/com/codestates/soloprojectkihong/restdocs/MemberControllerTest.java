@@ -1,5 +1,7 @@
 package com.codestates.soloprojectkihong.restdocs;
 
+import com.codestates.soloprojectkihong.api.v1.controller.MemberController;
+import com.codestates.soloprojectkihong.api.v1.dto.MemberDto;
 import com.codestates.soloprojectkihong.api.v1.entity.Member;
 import com.codestates.soloprojectkihong.api.v1.mapper.MemberMapper;
 import com.codestates.soloprojectkihong.api.v1.service.MemberService;
@@ -7,11 +9,17 @@ import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
+import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -21,18 +29,24 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.doNothing;
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.*;
+import static org.springframework.restdocs.payload.PayloadDocumentation.*;
+import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-
-@Transactional
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(MemberController.class)
+@MockBean(JpaMetamodelMappingContext.class)
+@AutoConfigureRestDocs
 public class MemberControllerTest {
 
     @Autowired
@@ -41,30 +55,32 @@ public class MemberControllerTest {
     @MockBean
     private MemberService memberService;
 
-    @Autowired
+    @MockBean
     private MemberMapper memberMapper;
 
     @Test
     void getMembersTest() throws Exception {
         // given
         Member member1 = Member.builder()
-                .name("어쩌구")
-                .companyLocation("001")
-                .companyName("광주")
-                .companyType("002")
-                .sex('m')
-                .password("1234").build();
-        Member member2 = Member.builder()
                 .name("저쩌구")
                 .companyLocation("003")
                 .companyName("강원")
                 .companyType("004")
-                .sex('f')
-                .password("1234").build();
-        List<Member> members = List.of(member1,member2);
+                .password("1234")
+                .sex('f').build();
+        List<Member> list = List.of(member1);
+        Page<Member> members = new PageImpl<>(list);
+        MemberDto.ResponseDto member2 = MemberDto.ResponseDto.builder()
+                .name("저쩌구")
+                .companyLocation("003")
+                .companyName("강원")
+                .companyType("004")
+                .sex('f').build();
+        List<MemberDto.ResponseDto> response = List.of(member2);
 
         // Stubbing by Mockito
-        given(memberService.searchMember(Mockito.anyString(), Mockito.anyString())).willReturn(members);
+        given(memberService.searchMember(Mockito.anyString(), Mockito.anyString(), Mockito.any())).willReturn(members);
+        given(memberMapper.memberToMemberResponses(Mockito.any())).willReturn(response);
 
 
         MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
@@ -72,16 +88,37 @@ public class MemberControllerTest {
         queryParams.add("companyType", "004");
 
         // when
-        ResultActions actions = mockMvc.perform(MockMvcRequestBuilders.get("/v1/members").params(queryParams).accept(MediaType.APPLICATION_JSON));
+        ResultActions actions = mockMvc.perform(
+                get("/v1/members").params(queryParams)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+        );
 
         // then
-        MvcResult result = actions
+        actions
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
-                .andReturn();
+                .andDo(document("get-member",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                List.of(
+                                        fieldWithPath("data.[]").type(JsonFieldType.ARRAY).description("결과 데이터"),
+                                        fieldWithPath("data.[].name").type(JsonFieldType.STRING).description("이름"),
+                                        fieldWithPath("data.[].companyLocation").type(JsonFieldType.STRING).description("지역 코드"),
+                                        fieldWithPath("data.[].companyType").type(JsonFieldType.STRING).description("업무 코드"),
+                                        fieldWithPath("data.[].companyName").type(JsonFieldType.STRING).description("회사이름"),
+                                        fieldWithPath("data.[].sex").type(JsonFieldType.STRING).description("성"),
+                                        fieldWithPath("pageInfo.size").type(JsonFieldType.NUMBER).description("페이지 당 회원 수"),
+                                        fieldWithPath("pageInfo.page").type(JsonFieldType.NUMBER).description("페이지"),
+                                        fieldWithPath("pageInfo.totalElements").type(JsonFieldType.NUMBER).description("총 회원 수"),
+                                        fieldWithPath("pageInfo.totalPages").type(JsonFieldType.NUMBER).description("총 페이지 수")
+                                )
+                        )
+                ));
 
-        List list = JsonPath.parse(result.getResponse().getContentAsString()).read("$.data");
-
-        assertThat(list.size(), is(1));
+//        List list = JsonPath.parse(result.getResponse().getContentAsString()).read("$.data");
+//
+//        assertThat(list.size(), is(1));
     }
 }

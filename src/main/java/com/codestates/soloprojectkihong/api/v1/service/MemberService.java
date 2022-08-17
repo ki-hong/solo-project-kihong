@@ -2,6 +2,8 @@ package com.codestates.soloprojectkihong.api.v1.service;
 
 import com.codestates.soloprojectkihong.api.v1.entity.Member;
 import com.codestates.soloprojectkihong.api.v1.repository.MemberRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,8 +22,8 @@ public class MemberService {
         return memberRepository.save(member);
     }
 
-    public List<Member> searchMember(String companyType, String companyLocation){
-        List<Member> members =memberRepository.findByType(companyType,companyLocation);
+    public Page<Member> searchMember(String companyType, String companyLocation, Pageable pageable){
+        Page<Member> members =memberRepository.findByType(companyType,companyLocation,pageable);
         return members;
     }
 }
