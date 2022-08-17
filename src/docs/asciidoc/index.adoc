@@ -1,3 +1,17 @@
+= 전국 사업자 연합 커뮤니티
+:sectnums:
+:toc: left
+:toclevels: 4
+:toc-title: Table of Contents
+:source-highlighter: prettify
+
+KIM KI HONG <rlghd153@gmail.com>
+
+v1.0.0, 2022.08.17
+
+***
+== MemberController
+
 === 전체 회원 조회 및 조건부 회원 조회
 .curl-request
 include::{snippets}/get-member/curl-request.adoc[]
